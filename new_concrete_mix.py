@@ -1,74 +1,108 @@
+# Streamlit App: Concrete Mix Design Optimizer
 import streamlit as st
 import pandas as pd
 from io import BytesIO
 import matplotlib.pyplot as plt
+from fpdf import FPDF
+import os
 
-st.set_page_config(page_title="Concrete Mix Design Optimizer", layout="wide")
+# --- Create .streamlit/config.toml if it doesn't exist ---
+if not os.path.exists('.streamlit'):
+    os.makedirs('.streamlit')
+
+config_content = """
+[theme]
+# Primary accent color for interactive elements
+primaryColor = "#1a5276"
+
+# Background color for the main content area
+backgroundColor = "#f5f5f5"
+
+# Background color for sidebar and most interactive widgets
+secondaryBackgroundColor = "#e8f4f8"
+
+# Color used for text
+textColor = "#212121"
+
+# Font family (can be "sans serif", "serif", "monospace")
+font = "sans serif"
+
+[runner]
+# Allows you to run the app without the warning about running as root
+allowRunOnSave = true
+
+[server]
+# Enable XSRF protection for additional security
+enableXsrfProtection = true
+# Configure the port if needed
+port = 8501
+"""
+
+if not os.path.exists('.streamlit/config.toml'):
+    with open('.streamlit/config.toml', 'w') as f:
+        f.write(config_content.strip())
+
+# --- App Config ---
+st.set_page_config(
+    page_title="Concrete Mix Optimizer", 
+    layout="wide",
+    page_icon="🧱"
+)
+
+# --- Sidebar Layout ---
+st.sidebar.title("🧭 Navigation")
+st.sidebar.markdown("Navigate app sections and upload data files.")
+
+uploaded_file = st.sidebar.file_uploader("📂 Upload CSV or Excel", type=["csv", "xlsx"])
+if uploaded_file:
+    if uploaded_file.name.endswith(".csv"):
+        df_uploaded = pd.read_csv(uploaded_file)
+    else:
+        df_uploaded = pd.read_excel(uploaded_file)
+    st.subheader("📄 Uploaded Data Preview")
+    st.dataframe(df_uploaded)
+
+# --- App Title and Description ---
 st.title("🧱 Concrete Mix Design Optimizer")
-
 st.markdown("""
-This tool helps you compute mix proportions for normal concrete using a simplified ACI method.
-Enter your material properties and design targets below.
+Welcome! This app calculates mix proportions for normal concrete using a simplified ACI method. 
+You can enter inputs manually or upload test data files.
 """)
 
-# --- Sidebar ---
-st.sidebar.title("Navigation")
-st.sidebar.markdown("Use the sections below to input parameters and review results.")
+# --- Inputs Section ---
+st.header("1️⃣ Mix Design Parameters")
+with st.expander("📋 Design Inputs", expanded=True):
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fck = st.number_input("🧪 Target compressive strength (MPa)", 10.0, 80.0, 25.0)
+        slump = st.slider("📏 Slump (mm)", 25, 200, 75)
+        use_slump_for_water = st.checkbox("📉 Use slump to estimate water content", value=False)
+        w_c_ratio = st.number_input("💧 Water/Cement Ratio", 0.3, 0.7, 0.5, step=0.01)
+        cement_sg = st.number_input("🧱 Cement SG", 2.0, 4.0, 3.15, step=0.01)
+        water_sg = st.number_input("💦 Water SG", 0.9, 1.1, 1.0, step=0.01)
+        
+    with col2:
+        admixture_pct = st.number_input("⚗️ Admixture (% of cement)", 0.0, 10.0, 0.0, step=0.1)
+        fa_ratio = st.number_input("🪨 Fine Aggregate Volume Ratio", 0.2, 0.6, 0.35, step=0.01)
+        fa_sg = st.number_input("🧮 Fine Aggregate SG", 2.4, 2.8, 2.65, step=0.01)
+        fa_abs = st.number_input("🧂 Fine Aggregate Absorption (%)", 0.0, 5.0, 1.0, step=0.1)
+        ca_sg = st.number_input("🪨 Coarse Aggregate SG", 2.4, 2.8, 2.65, step=0.01)
+        ca_abs = st.number_input("🧂 Coarse Aggregate Absorption (%)", 0.0, 5.0, 0.5, step=0.1)
 
-# --- Input Section ---
-st.header("1. Mix Design Parameters")
-with st.expander("Design Inputs", expanded=True):
-    fck = st.number_input("Target compressive strength (MPa)", 10.0, 80.0, 25.0)
-    slump = st.slider("Slump (mm)", 25, 200, 75)
-    use_slump_for_water = st.checkbox("Use slump value to estimate water content", value=False)
-    w_c_ratio = st.number_input("Water/Cement Ratio", 0.3, 0.7, 0.5)
-    cement_sg = st.number_input("Cement specific gravity (SG)", 2.0, 4.0, 3.15)
-    water_sg = st.number_input("Water specific gravity (SG)", 0.9, 1.1, 1.0)
-    admixture_pct = st.number_input("Admixture (% of cement weight)", 0.0, 10.0, 0.0)
-    fa_ratio = st.number_input("Fine Aggregate Volume Ratio", 0.2, 0.6, 0.35)
-    fa_sg = st.number_input("Fine aggregate SG", 2.4, 2.8, 2.65)
-    fa_abs = st.number_input("Fine aggregate absorption (%)", 0.0, 5.0, 1.0)
-    ca_sg = st.number_input("Coarse aggregate SG", 2.4, 2.8, 2.65)
-    ca_abs = st.number_input("Coarse aggregate absorption (%)", 0.0, 5.0, 0.5)
-    moisture_content = st.number_input("Moisture content of aggregates (%)", 0.0, 10.0, 2.0)
-    ca_ratio = st.number_input("Coarse Aggregate Volume Ratio", 0.3, 0.8, 0.65)
+    moisture_content = st.number_input("💧 Moisture Content (%)", 0.0, 10.0, 2.0, step=0.1)
+    ca_ratio = st.number_input("🧱 Coarse Aggregate Volume Ratio", 0.3, 0.8, 0.65, step=0.01)
 
-# --- Unit Converter ---
-st.header("2. Unit Converter")
-with st.expander("Quick Unit Conversion"):
-    kg = st.number_input("Kilograms (kg)", value=0.0)
-    st.write(f"Pounds (lb): {round(kg * 2.20462, 2)}")
-    lb = st.number_input("Pounds (lb)", value=0.0)
-    st.write(f"Kilograms (kg): {round(lb / 2.20462, 2)}")
-
-# --- Material Costs ---
-st.header("3. Optional: Material Costs")
-with st.expander("Material Prices (Optional)"):
-    cement_cost = st.number_input("Cement cost per kg", 0.0, value=0.5)
-    water_cost = st.number_input("Water cost per kg", 0.0, value=0.01)
-    fa_cost = st.number_input("Fine aggregate cost per kg", 0.0, value=0.02)
-    ca_cost = st.number_input("Coarse aggregate cost per kg", 0.0, value=0.02)
-    admixture_cost = st.number_input("Admixture cost per kg", 0.0, value=1.0)
-    dollar_to_cedi = st.number_input("Exchange Rate (USD to GHS)", 1.0, value=13.0)
-
-# --- Strength Estimator ---
-st.header("4. Optional: Estimate W/C Ratio from Strength")
-with st.expander("Estimate W/C Ratio"):
-    user_strength = st.number_input("Input target strength (MPa)", 10.0, 80.0, 25.0)
-    estimated_wc = round(0.7 - 0.01 * user_strength, 3)
-    st.write(f"Estimated W/C Ratio: {estimated_wc}")
-
-# --- Optional User Inputs ---
-st.header("5. Optional: Custom Mix Proportions")
-with st.expander("Enter Custom Mix Proportions (kg/m³)"):
-    user_water = st.number_input("Water (kg/m³)", value=0.0)
-    user_cement = st.number_input("Cement (kg/m³)", value=0.0)
-    user_fa = st.number_input("Fine Aggregate (kg/m³)", value=0.0)
-    user_ca = st.number_input("Coarse Aggregate (kg/m³)", value=0.0)
-    user_admixture = st.number_input("Admixture (kg/m³)", value=0.0)
-    custom_entered = user_water + user_cement + user_fa + user_ca + user_admixture > 0
-    if custom_entered:
-        st.success("Custom mix proportions provided. Comparison will be shown after calculation.")
+# --- PDF Export Function ---
+def generate_pdf_report(result):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Concrete Mix Design Report", ln=True, align='C')
+    pdf.ln(10)
+    for k, v in result.items():
+        pdf.cell(200, 10, txt=f"{k}: {v} kg/m³", ln=True)
+    return pdf.output(dest="S").encode("latin-1")
 
 # --- Excel Export Function ---
 def to_excel(df):
@@ -103,10 +137,8 @@ class MixDesignCalculator:
     def calculate_aggregate_masses(self, total_agg_vol):
         fa_mass_ssd = self.params["fa_ratio"] * total_agg_vol * self.params["fa_sg"] * 1000
         ca_mass_ssd = self.params["ca_ratio"] * total_agg_vol * self.params["ca_sg"] * 1000
-
         fa_correction = 1 + (self.params["moisture_content"] - self.params["fa_abs"]) / 100
         ca_correction = 1 + (self.params["moisture_content"] - self.params["ca_abs"]) / 100
-
         fa_mass = fa_mass_ssd * fa_correction
         ca_mass = ca_mass_ssd * ca_correction
         return fa_mass, ca_mass
@@ -117,7 +149,6 @@ class MixDesignCalculator:
         admixture = round(self.calculate_admixture_dose(cement), 1)
         total_agg_vol = self.calculate_aggregate_volumes(cement, water, admixture)
         fa_mass, ca_mass = self.calculate_aggregate_masses(total_agg_vol)
-
         self.result = {
             'Water': water,
             'Cement': cement,
@@ -125,11 +156,10 @@ class MixDesignCalculator:
             'Coarse Aggregate': round(ca_mass, 1),
             'Admixture': admixture
         }
-
         return self.result
 
-# --- Button to trigger calculation ---
-if st.button("🔍 Calculate Mix Design"):
+# --- Mix Design Button ---
+if st.button("🔍 Calculate Mix Design", type="primary"):
     try:
         input_params = {
             "use_slump_for_water": use_slump_for_water,
@@ -146,72 +176,49 @@ if st.button("🔍 Calculate Mix Design"):
             "moisture_content": moisture_content,
             "ca_ratio": ca_ratio
         }
-
         calculator = MixDesignCalculator(input_params)
         result = calculator.calculate()
         st.session_state.result = result
-
+        st.success("✅ Mix design calculated successfully!")
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"❌ Error: {str(e)}")
 
+# --- Results and Exports ---
 if 'result' in st.session_state:
     result = st.session_state.result
-
     mix_df = pd.DataFrame({
         'Component': result.keys(),
-        'Quantity (kg/m³)': result.values(),
-        'Unit Cost ($/kg)': [water_cost, cement_cost, fa_cost, ca_cost, admixture_cost],
+        'Quantity (kg/m³)': result.values()
     })
-    mix_df['Total Cost ($/m³)'] = mix_df['Quantity (kg/m³)'] * mix_df['Unit Cost ($/kg)']
-    mix_df['Total Cost (GHS/m³)'] = mix_df['Total Cost ($/m³)'] * dollar_to_cedi
 
-    st.header("6. Calculated Mix and Cost")
+    st.header("📊 2️⃣ Calculated Mix Summary")
+    st.dataframe(mix_df, use_container_width=True, hide_index=True)
+
+    st.subheader("Mix Proportion Visualization")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.pie(result.values(), labels=result.keys(), autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')
+    st.pyplot(fig)
+
+    st.header("📤 3️⃣ Export Report")
     col1, col2 = st.columns(2)
+    
     with col1:
-        st.dataframe(mix_df, use_container_width=True)
-        st.metric("💲 Total Cost per m³ (USD)", f"${round(mix_df['Total Cost ($/m³)'].sum(), 2)}")
-        st.metric("🇬🇭 Total Cost per m³ (GHS)", f"GH₵{round(mix_df['Total Cost (GHS/m³)'].sum(), 2)}")
-
+        st.download_button(
+            label="⬇️ Download Excel File",
+            data=to_excel(mix_df),
+            file_name="concrete_mix_design.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
     with col2:
-        fig, ax = plt.subplots()
-        ax.pie(result.values(), labels=result.keys(), autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')
-        st.pyplot(fig)
+        st.download_button(
+            label="⬇️ Download PDF Report",
+            data=generate_pdf_report(result),
+            file_name="concrete_mix_report.pdf",
+            mime="application/pdf"
+        )
 
-    if custom_entered:
-        user_mix = {
-            'Water': user_water,
-            'Cement': user_cement,
-            'Fine Aggregate': user_fa,
-            'Coarse Aggregate': user_ca,
-            'Admixture': user_admixture
-        }
-        compare_df = pd.DataFrame({
-            'Component': result.keys(),
-            'Calculated (kg/m³)': result.values(),
-            'User Input (kg/m³)': [user_mix[k] for k in result],
-            'Difference': [round(float(user_mix[k]) - float(result[k]), 2) for k in result]
-        })
-        st.subheader("Comparison with User Mix")
-        st.dataframe(compare_df, use_container_width=True)
-
-        warnings = []
-        for comp in result:
-            diff_pct = abs(user_mix[comp] - result[comp]) / result[comp] * 100
-            if diff_pct > 10:
-                warnings.append(f"⚠️ {comp} deviates by {round(diff_pct, 1)}% from calculated.")
-        if warnings:
-            st.warning("\n".join(warnings))
-        else:
-            st.success("All user values are within 10% of calculated mix.")
-
-    st.success("Mix design completed successfully.")
-
-    st.header("7. Export Results")
-    st.download_button(
-        label="⬇️ Download Excel File",
-        data=to_excel(mix_df),
-        file_name="concrete_mix_design.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
+# --- Footer ---
+st.markdown("---")
+st.caption("© 2025 Concrete Mix Design Optimizer | Built by Automation_hub")
