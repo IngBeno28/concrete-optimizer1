@@ -30,3 +30,8 @@ This web-based tool classifies soils based on the **AASHTO M 145 standard** usin
 2. Install dependencies:  
    ```bash
    pip install -r requirements.txt
+
+## 📘 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
