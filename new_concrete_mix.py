@@ -201,7 +201,7 @@ if 'result' in st.session_state:
     st.pyplot(fig)
 
     st.header("📤 3️⃣ Export Report")
-    col1 = st.columns()
+    col1, col2 = st.columns(2)  # Fixed: Now properly creates 2 columns
     
     with col1:
         st.download_button(
@@ -210,7 +210,15 @@ if 'result' in st.session_state:
             file_name="concrete_mix_design.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
+    
+    with col2:
+        pdf_report = generate_pdf_report(result)
+        st.download_button(
+            label="⬇️ Download PDF Report",
+            data=pdf_report,
+            file_name="concrete_mix_report.pdf",
+            mime="application/pdf"
+        )
 
 # --- Footer ---
 st.markdown("---")
