@@ -195,13 +195,13 @@ if 'result' in st.session_state:
     st.dataframe(mix_df, use_container_width=True, hide_index=True)
 
     st.subheader("Mix Proportion Visualization")
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(5, 3))
     ax.pie(result.values(), labels=result.keys(), autopct='%1.1f%%', startangle=90)
     ax.axis('equal')
     st.pyplot(fig)
 
     st.header("📤 3️⃣ Export Report")
-    col1, col2 = st.columns(2)
+    col1 = st.columns()
     
     with col1:
         st.download_button(
@@ -210,14 +210,7 @@ if 'result' in st.session_state:
             file_name="concrete_mix_design.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-    
-    with col2:
-        st.download_button(
-            label="⬇️ Download PDF Report",
-            data=generate_pdf_report(result),
-            file_name="concrete_mix_report.pdf",
-            mime="application/pdf"
-        )
+
 
 # --- Footer ---
 st.markdown("---")
