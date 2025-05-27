@@ -1,35 +1,37 @@
-# concrete-optimizer1
 
-# 🌍 AASHTO Soil Classification Tool
+## 🧱 **Concrete Mix Optimization Tool – `README.md`**
 
-This web-based tool classifies soils based on the **AASHTO M 145 standard** using sieve analysis and Atterberg limit test results. Built with Python and Streamlit, the app is tailored for field and lab engineers, geotechnical consultants, and students in civil engineering.
+```markdown
+# 🧱 ACI Concrete Mix Optimization Tool
+
+A web app that computes concrete mix proportions based on the **ACI 211.1 method** for normal weight concrete. Ideal for construction engineers, lab technicians, and researchers looking to automate and optimize concrete mix design.
 
 ## 🚀 Try the Live App
 
-🔗 [Open AASHTO Classification Tool](https://aashtoclassificationtool.streamlit.app)
+🔗 [Open Concrete Mix Design Tool](https://Concreteoptimizationtool.streamlit.app)
 
 ## 📦 Features
 
-- Accepts sieve data (percent passing)
-- Handles Liquid Limit (LL) and Plasticity Index (PI)
-- Classifies soils into A-1 to A-7 groups
-- Identifies significant constituent materials
-- Fully interprets AASHTO classification logic
-- Fast, mobile-responsive interface
+- Input target strength, slump, max aggregate size, etc.
+- Adjusts for aggregate moisture & absorption
+- Outputs optimized concrete mix proportions
+- Real-time, responsive calculations
+- Simple, clean UI
 
 ## 🛠️ Technologies Used
 
 - Python 3
 - Streamlit
-- Pandas
 - NumPy
+- Basic engineering math
 
 ## 📄 How to Use
 
-1. Clone or download this repository
+1. Clone or download the repo
 2. Install dependencies:  
    ```bash
    pip install -r requirements.txt
+
 
 ## 📘 License
 
