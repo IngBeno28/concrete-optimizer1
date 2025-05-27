@@ -195,7 +195,7 @@ if 'result' in st.session_state:
     st.dataframe(mix_df, use_container_width=True, hide_index=True)
 
     st.subheader("Mix Proportion Visualization")
-    fig, ax = plt.subplots(figsize=(5, 3))
+    fig, ax = plt.subplots(figsize=(6, 3))
     ax.pie(result.values(), labels=result.keys(), autopct='%1.1f%%', startangle=90)
     ax.axis('equal')
     st.pyplot(fig)
