@@ -1,2 +1,9 @@
+# .streamlit/config.toml
 [server]
-runOnSave = true
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+port = 8501
+
+[runner]
+magicEnabled = false
