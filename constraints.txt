@@ -1,4 +1,7 @@
-Pygments==2.16.1
-markdown-it-py==2.2.0
-rich==13.7.0
-mdurl==0.1.2
+# Version constraints for dependencies
+streamlit>=1.32.0,<2.0.0
+pandas>=2.1.0,<3.0.0
+matplotlib>=3.8.0,<4.0.0
+fpdf2>=2.7.0,<3.0.0
+openpyxl>=3.1.0,<4.0.0
+numpy>=1.26.0,<2.0.0
