@@ -1,35 +1,35 @@
 # Streamlit App: Concrete Mix Design Optimizer
 import streamlit as st
-import sys
-# Modern cache initialization with version checking
-try:
-    if st.__version__ >= "1.32.0":
-        # New recommended cache clearing method
-        st.cache_data.clear()
-        st.cache_resource.clear()
-    else:
-        # Fallback for older versions (though your requirements specify 1.32+)
-        st.experimental_memo.clear()
-        st.experimental_singleton.clear()
-except Exception as e:
-    sys.stderr.write(f"Cache initialization note: {str(e)}\n")
-    pass  # Silent fail is okay here
 import pandas as pd
 from io import BytesIO
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 import os
 import sys
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-# Version compatibility check
-required_streamlit = "1.32.0"
-current_streamlit = st.__version__
-if current_streamlit < required_streamlit:
-    st.error(f"⚠️ Streamlit {required_streamlit}+ required (you have {current_streamlit})")
+# --- Modern Cache Initialization ---
+def clear_streamlit_cache():
+    try:
+        ctx = get_script_run_ctx()
+        if ctx and hasattr(ctx, "script_requests"):
+            ctx.script_requests.clear()
+    except Exception as e:
+        st.info("Note: Cache couldn't be cleared automatically.")
+        sys.stderr.write(f"[Cache Init] Warning: {str(e)}\n")
+
+# Automatically clear cache on run (you can change this behavior later)
+clear_streamlit_cache()
+
+# Optional: Sidebar button for manual cache clearing
+if st.sidebar.button("🔄 Clear Session Cache"):
+    clear_streamlit_cache()
+    st.success("Streamlit cache cleared!")
+
+# --- Version Validation ---
+if st.__version__ != "1.32.2":
+    st.warning(f"Please install Streamlit 1.32.2 (current: {st.__version__})")
     st.stop()
-    
-# --- Clear cache and ensure clean state ---
-st.legacy_caching.clear_cache()
 
 # --- Create .streamlit/config.toml if it doesn't exist ---
 if not os.path.exists('.streamlit'):
@@ -49,6 +49,7 @@ allowRunOnSave = true
 [server]
 enableXsrfProtection = true
 port = 8501
+enableCORS = false
 """
 
 if not os.path.exists('.streamlit/config.toml'):
