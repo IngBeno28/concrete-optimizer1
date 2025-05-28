@@ -21,6 +21,13 @@ from fpdf import FPDF
 import os
 import sys
 
+# Version compatibility check
+required_streamlit = "1.32.0"
+current_streamlit = st.__version__
+if current_streamlit < required_streamlit:
+    st.error(f"⚠️ Streamlit {required_streamlit}+ required (you have {current_streamlit})")
+    st.stop()
+    
 # --- Clear cache and ensure clean state ---
 st.legacy_caching.clear_cache()
 
