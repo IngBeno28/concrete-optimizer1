@@ -5,6 +5,10 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 import os
+import sys
+
+# --- Clear cache and ensure clean state ---
+st.legacy_caching.clear_cache()
 
 # --- Create .streamlit/config.toml if it doesn't exist ---
 if not os.path.exists('.streamlit'):
@@ -12,29 +16,17 @@ if not os.path.exists('.streamlit'):
 
 config_content = """
 [theme]
-# Primary accent color for interactive elements
 primaryColor = "#1a5276"
-
-# Background color for the main content area
 backgroundColor = "#f5f5f5"
-
-# Background color for sidebar and most interactive widgets
 secondaryBackgroundColor = "#e8f4f8"
-
-# Color used for text
 textColor = "#212121"
-
-# Font family (can be "sans serif", "serif", "monospace")
 font = "sans serif"
 
 [runner]
-# Allows you to run the app without the warning about running as root
 allowRunOnSave = true
 
 [server]
-# Enable XSRF protection for additional security
 enableXsrfProtection = true
-# Configure the port if needed
 port = 8501
 """
 
@@ -55,12 +47,15 @@ st.sidebar.markdown("Navigate app sections and upload data files.")
 
 uploaded_file = st.sidebar.file_uploader("📂 Upload CSV or Excel", type=["csv", "xlsx"])
 if uploaded_file:
-    if uploaded_file.name.endswith(".csv"):
-        df_uploaded = pd.read_csv(uploaded_file)
-    else:
-        df_uploaded = pd.read_excel(uploaded_file)
-    st.subheader("📄 Uploaded Data Preview")
-    st.dataframe(df_uploaded)
+    try:
+        if uploaded_file.name.endswith(".csv"):
+            df_uploaded = pd.read_csv(uploaded_file)
+        else:
+            df_uploaded = pd.read_excel(uploaded_file)
+        st.subheader("📄 Uploaded Data Preview")
+        st.dataframe(df_uploaded)
+    except Exception as e:
+        st.error(f"Error reading file: {str(e)}")
 
 # --- App Title and Description ---
 st.title("🧱 Concrete Mix Design Optimizer")
@@ -93,23 +88,56 @@ with st.expander("📋 Design Inputs", expanded=True):
     moisture_content = st.number_input("💧 Moisture Content (%)", 0.0, 10.0, 2.0, step=0.1)
     ca_ratio = st.number_input("🧱 Coarse Aggregate Volume Ratio", 0.3, 0.8, 0.65, step=0.01)
 
-# --- PDF Export Function ---
+# --- Enhanced PDF Export Function ---
 def generate_pdf_report(result):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Concrete Mix Design Report", ln=True, align='C')
-    pdf.ln(10)
-    for k, v in result.items():
-        pdf.cell(200, 10, txt=f"{k}: {v} kg/m³", ln=True)
-    return pdf.output(dest="S").encode("latin-1")
+    """Generate PDF report with robust error handling"""
+    try:
+        if not isinstance(result, dict):
+            raise ValueError("Result must be a dictionary")
+            
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # Header
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Concrete Mix Design Report", ln=True, align='C')
+        pdf.ln(15)
+        
+        # Content
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="Mix Proportions (kg/m³)", ln=True)
+        pdf.ln(5)
+        
+        for component, quantity in result.items():
+            pdf.cell(100, 8, txt=f"{component}:", border=0)
+            pdf.cell(100, 8, txt=f"{quantity:.1f} kg/m³", border=0, ln=True)
+        
+        # Add timestamp
+        pdf.ln(10)
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(200, 8, txt=f"Generated on: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}", ln=True)
+        
+        pdf_output = pdf.output(dest="S")
+        if not pdf_output:
+            raise RuntimeError("PDF generation returned empty output")
+            
+        return pdf_output.encode("latin-1")
+        
+    except Exception as e:
+        st.error(f"PDF generation error: {str(e)}")
+        st.error(f"Error details: {sys.exc_info()[0]}")
+        return None
 
 # --- Excel Export Function ---
 def to_excel(df):
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Mix Design')
-    return output.getvalue()
+    try:
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Mix Design')
+        return output.getvalue()
+    except Exception as e:
+        st.error(f"Excel generation error: {str(e)}")
+        return None
 
 # --- Mix Design Calculator Class ---
 class MixDesignCalculator:
@@ -141,7 +169,7 @@ class MixDesignCalculator:
         ca_correction = 1 + (self.params["moisture_content"] - self.params["ca_abs"]) / 100
         fa_mass = fa_mass_ssd * fa_correction
         ca_mass = ca_mass_ssd * ca_correction
-        return fa_mass, ca_mass
+        return round(fa_mass, 1), round(ca_mass, 1)
 
     def calculate(self):
         water = round(self.estimate_water_content(), 1)
@@ -152,13 +180,13 @@ class MixDesignCalculator:
         self.result = {
             'Water': water,
             'Cement': cement,
-            'Fine Aggregate': round(fa_mass, 1),
-            'Coarse Aggregate': round(ca_mass, 1),
+            'Fine Aggregate': fa_mass,
+            'Coarse Aggregate': ca_mass,
             'Admixture': admixture
         }
         return self.result
 
-# --- Mix Design Button ---
+# --- Main Calculation Logic ---
 if st.button("🔍 Calculate Mix Design", type="primary"):
     try:
         input_params = {
@@ -181,9 +209,9 @@ if st.button("🔍 Calculate Mix Design", type="primary"):
         st.session_state.result = result
         st.success("✅ Mix design calculated successfully!")
     except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        st.error(f"❌ Calculation error: {str(e)}")
 
-# --- Results and Exports ---
+# --- Results Display ---
 if 'result' in st.session_state:
     result = st.session_state.result
     mix_df = pd.DataFrame({
@@ -201,24 +229,27 @@ if 'result' in st.session_state:
     st.pyplot(fig)
 
     st.header("📤 3️⃣ Export Report")
-    col1, col2 = st.columns(2)  # Fixed: Now properly creates 2 columns
+    col1, col2 = st.columns(2)
     
     with col1:
-        st.download_button(
-            label="⬇️ Download Excel File",
-            data=to_excel(mix_df),
-            file_name="concrete_mix_design.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        excel_data = to_excel(mix_df)
+        if excel_data:
+            st.download_button(
+                label="⬇️ Download Excel File",
+                data=excel_data,
+                file_name="concrete_mix_design.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
     
     with col2:
-        pdf_report = generate_pdf_report(result)
-        st.download_button(
-            label="⬇️ Download PDF Report",
-            data=pdf_report,
-            file_name="concrete_mix_report.pdf",
-            mime="application/pdf"
-        )
+        pdf_data = generate_pdf_report(result)
+        if pdf_data:
+            st.download_button(
+                label="⬇️ Download PDF Report",
+                data=pdf_data,
+                file_name="concrete_mix_report.pdf",
+                mime="application/pdf"
+            )
 
 # --- Footer ---
 st.markdown("---")
