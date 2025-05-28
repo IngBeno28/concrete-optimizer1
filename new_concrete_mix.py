@@ -1,5 +1,19 @@
 # Streamlit App: Concrete Mix Design Optimizer
 import streamlit as st
+import sys
+# Modern cache initialization with version checking
+try:
+    if st.__version__ >= "1.32.0":
+        # New recommended cache clearing method
+        st.cache_data.clear()
+        st.cache_resource.clear()
+    else:
+        # Fallback for older versions (though your requirements specify 1.32+)
+        st.experimental_memo.clear()
+        st.experimental_singleton.clear()
+except Exception as e:
+    sys.stderr.write(f"Cache initialization note: {str(e)}\n")
+    pass  # Silent fail is okay here
 import pandas as pd
 from io import BytesIO
 import matplotlib.pyplot as plt
