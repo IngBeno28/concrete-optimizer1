@@ -1,5 +1,13 @@
 # Streamlit App: Concrete Mix Design Optimizer
 import streamlit as st
+import streamlit as st
+st.set_page_config(
+    page_title="Concrete Mix Optimizer",
+    page_icon="🧱",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import pandas as pd
 from io import BytesIO
 import matplotlib.pyplot as plt
@@ -81,6 +89,14 @@ if uploaded_file:
 
 # --- App Title and Description ---
 st.title("🧱 Concrete Mix Design Optimizer")
+st.markdown("""
+<div style='text-align: center; padding: 10px;'>
+    <h3 style='font-family: Arial, sans-serif; color: #007FFF; font-size: 24px;'>
+        UPLOAD LABORATORY RESULTS TO CALCULATE CONCRETE MIX DESIGN
+    </h3>
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 Welcome! This app calculates mix proportions for normal concrete using a simplified ACI method. 
 You can enter inputs manually or upload test data files.
