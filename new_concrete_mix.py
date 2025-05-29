@@ -190,16 +190,16 @@ if 'result' in st.session_state:
                 st.error(f"PDF generation failed: {str(e)}")
                 return None
         
-        # In your download button section:
-        if 'result' in st.session_state:
-            pdf_data = generate_pdf_report(st.session_state.result)
-            if pdf_data:
-                st.download_button(
-                    "⬇️ Download PDF",
-                    data=pdf_data,  # Already binary data
-                    file_name="mix_report.pdf",
-                    mime="application/pdf"
-                )
+            # In your download button section:
+            if 'result' in st.session_state:
+                pdf_data = generate_pdf_report(st.session_state.result)
+                if pdf_data:
+                    st.download_button(
+                        "⬇️ Download PDF",
+                        data=pdf_data,  # Already binary data
+                        file_name="mix_report.pdf",
+                        mime="application/pdf"
+                    )
 # --- Footer ---
 st.markdown("---")
 st.caption("© 2025 Concrete Mix Optimizer | v2.1")
