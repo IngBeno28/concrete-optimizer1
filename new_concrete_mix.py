@@ -64,10 +64,8 @@ backgroundColor = "#f5f5f5"
 secondaryBackgroundColor = "#e8f4f8"
 textColor = "#212121"
 font = "sans serif"
-
 [runner]
 allowRunOnSave = true
-
 [server]
 enableXsrfProtection = true
 port = 8501
