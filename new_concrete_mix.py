@@ -7,6 +7,7 @@ from fpdf import FPDF
 import os
 import sys
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+
 st.set_page_config(
     page_title="Concrete Mix Optimizer",
     page_icon="🧱",
