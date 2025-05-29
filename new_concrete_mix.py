@@ -163,8 +163,8 @@ if 'result' in st.session_state:
         )
     
     with col2:
-        def generate_pdf_report(result):
-            """Generate PDF report with proper error handling"""
+      def generate_pdf_report(result):
+            """Generate PDF report with proper handling of binary data"""
             try:
                 if not result or not isinstance(result, dict):
                     raise ValueError("Invalid result data")
@@ -183,28 +183,23 @@ if 'result' in st.session_state:
                     pdf.cell(100, 8, txt=f"{component}:", border=0)
                     pdf.cell(100, 8, txt=f"{quantity} kg/m³", border=0, ln=1)
                 
-                # Generate output
-                pdf_output = pdf.output(dest='S').encode('latin-1')
-                if not pdf_output:
-                    raise RuntimeError("Empty PDF generated")
-                    
-                return pdf_output
+                # Return binary data directly (no encoding needed)
+                return pdf.output(dest='S')
                 
             except Exception as e:
                 st.error(f"PDF generation failed: {str(e)}")
                 return None
         
-        # --- In your download button section ---
+        # In your download button section:
         if 'result' in st.session_state:
             pdf_data = generate_pdf_report(st.session_state.result)
             if pdf_data:
                 st.download_button(
                     "⬇️ Download PDF",
-                    data=pdf_data,
+                    data=pdf_data,  # Already binary data
                     file_name="mix_report.pdf",
                     mime="application/pdf"
                 )
-
 # --- Footer ---
 st.markdown("---")
 st.caption("© 2025 Concrete Mix Optimizer | v2.1")
