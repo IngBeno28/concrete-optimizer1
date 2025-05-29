@@ -202,4 +202,4 @@ if 'result' in st.session_state:
                     )
 # --- Footer ---
 st.markdown("---")
-st.caption("© 2025 Concrete Mix Optimizer | v2.1")
+st.caption("© 2025 Concrete Mix Optimizer | Built by Automation_hub")
