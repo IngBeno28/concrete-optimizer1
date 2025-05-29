@@ -1,3 +1,22 @@
+import streamlit as st
+
+try:
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import numpy as np
+    import fpdf
+    import openpyxl
+    import gunicorn
+    import waitress
+    import python_dateutil
+    import protobuf
+
+    st.success("✅ All required modules imported successfully.")
+except ModuleNotFoundError as e:
+    st.error(f"❌ ModuleNotFoundError: {e}")
+except Exception as e:
+    st.error(f"⚠️ An unexpected error occurred: {e}")
+
 # Streamlit App: Concrete Mix Design Optimizer
 import streamlit as st
 st.set_page_config(
