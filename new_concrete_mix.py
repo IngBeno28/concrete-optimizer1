@@ -8,7 +8,7 @@ try:
     import waitress
     import python_dateutil
     import protobuf
-
+    import streamlit as st
     st.success("✅ All required modules imported successfully.")
 except ModuleNotFoundError as e:
     st.error(f"❌ ModuleNotFoundError: {e}")
@@ -16,7 +16,7 @@ except Exception as e:
     st.error(f"⚠️ An unexpected error occurred: {e}")
 
 # Streamlit App: Concrete Mix Design Optimizer
-import streamlit as st
+
 st.set_page_config(
     page_title="Concrete Mix Optimizer",
     page_icon="🧱",
