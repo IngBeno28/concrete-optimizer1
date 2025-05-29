@@ -163,17 +163,46 @@ if 'result' in st.session_state:
         )
     
     with col2:
+def generate_pdf_report(result):
+    """Generate PDF report with proper error handling"""
+    try:
+        if not result or not isinstance(result, dict):
+            raise ValueError("Invalid result data")
+            
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", size=12)
+        
+        # Header
+        pdf.set_font("Arial", 'B', 16)
         pdf.cell(200, 10, txt="Concrete Mix Design Report", ln=1, align='C')
-        for k, v in st.session_state.result.items():
-            pdf.cell(200, 10, txt=f"{k}: {v} kg/m³", ln=1)
+        pdf.ln(10)
+        
+        # Content
+        pdf.set_font("Arial", size=12)
+        for component, quantity in result.items():
+            pdf.cell(100, 8, txt=f"{component}:", border=0)
+            pdf.cell(100, 8, txt=f"{quantity} kg/m³", border=0, ln=1)
+        
+        # Generate output
+        pdf_output = pdf.output(dest='S').encode('latin-1')
+        if not pdf_output:
+            raise RuntimeError("Empty PDF generated")
+            
+        return pdf_output
+        
+    except Exception as e:
+        st.error(f"PDF generation failed: {str(e)}")
+        return None
+
+# --- In your download button section ---
+if 'result' in st.session_state:
+    pdf_data = generate_pdf_report(st.session_state.result)
+    if pdf_data:
         st.download_button(
             "⬇️ Download PDF",
-            pdf.output(dest='S').encode('latin-1'),
-            "mix_report.pdf",
-            help="Generate printable PDF report"
+            data=pdf_data,
+            file_name="mix_report.pdf",
+            mime="application/pdf"
         )
 
 # --- Footer ---
