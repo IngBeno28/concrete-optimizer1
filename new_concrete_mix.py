@@ -36,6 +36,22 @@ if st.__version__ != "1.32.2":
     st.warning(f"Please install Streamlit 1.32.2 (current: {st.__version__})")
     st.stop()
 
+# --- App Title and Description ---
+st.title("🧱 Concrete Mix Design Optimizer")
+st.markdown("""
+<div style='text-align: center; padding: 10px;'>
+    <h3 style='font-family: Arial, sans-serif; color: #007FFF; font-size: 24px;'>
+        Upload Lab Results or Enter Design Inputs to Calculate Optimal Concrete Mix
+    </h3>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+Welcome! This app calculates mix proportions for normal concrete using a simplified ACI method.
+You can enter inputs manually or upload test data files. Scroll down to explore the features.
+""")
+st.markdown("---")
+
 # --- Create .streamlit/config.toml if it doesn't exist ---
 if not os.path.exists('.streamlit'):
     os.makedirs('.streamlit')
@@ -60,13 +76,14 @@ enableCORS = false
 if not os.path.exists('.streamlit/config.toml'):
     with open('.streamlit/config.toml', 'w') as f:
         f.write(config_content.strip())
-
+'''
 # --- App Config ---
 st.set_page_config(
     page_title="Concrete Mix Optimizer", 
     layout="wide",
     page_icon="🧱"
 )
+'''
 
 # --- Sidebar Layout ---
 st.sidebar.title("🧭 Navigation")
