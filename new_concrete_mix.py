@@ -3,7 +3,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from fpdf import FPDF
 from io import BytesIO
 import os
 
@@ -59,7 +58,6 @@ with st.expander("🔬 Material Properties"):
     moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 1.0)
 
 # --- Calculation Logic ---
-@st.cache_data
 def calculate_mix():
     ft = fck + 1.34 * std_dev
     if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
@@ -104,9 +102,11 @@ def calculate_mix():
 if st.button("🧪 Compute Mix Design"):
     result = calculate_mix()
     st.write("### 📊 Mix Proportions:")
+    
+    # Improved table display
     df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-    st.dataframe(df)
-
+    st.dataframe(df.style.format(precision=2), height=300, width=600)
+    
     # --- Chart Toggle ---
     chart_type = st.radio("📈 Select Chart Type", ["Pie Chart", "Bar Chart"], horizontal=True)
 
@@ -114,20 +114,29 @@ if st.button("🧪 Compute Mix Design"):
         k.split(" (")[0]: v for k, v in result.items() if "kg/m³" in k and "Admixture" not in k
     }
 
-    fig, ax = plt.subplots()
+    # Adjust chart size
+    fig, ax = plt.subplots(figsize=(6,4))
     if chart_type == "Pie Chart":
         ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90)
         ax.axis('equal')
+        plt.tight_layout()
     else:
         ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
         ax.set_ylabel("Mass (kg/m³)")
         ax.set_title("Mix Composition")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
 
     st.pyplot(fig)
 
     # --- Download CSV ---
-    st.download_button("📥 Download CSV", df.to_csv(), file_name="aci_mix.csv")
-
+    csv = df.to_csv().encode('utf-8')
+    st.download_button(
+        label="📥 Download CSV",
+        data=csv,
+        file_name="aci_mix.csv",
+        mime='text/csv'
+    )
 
 # --- Footer ---
 st.markdown("---")
