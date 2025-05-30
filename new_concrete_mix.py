@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-import os
 
 # --- Streamlit Config ---
 st.set_page_config("ACI Mix Designer Enhanced", layout="wide")
@@ -103,41 +102,63 @@ if st.button("🧪 Compute Mix Design"):
     result = calculate_mix()
     st.write("### 📊 Mix Proportions:")
     
-    # Larger table display
+    # Responsive table display
     df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-    st.dataframe(df.style.format(precision=2), height=400, width=800)  # Increased height and width
     
-    # --- Chart Toggle ---
-    chart_type = st.radio("📈 Select Chart Type", ["Pie Chart", "Bar Chart"], horizontal=True)
+    # Use columns to make layout responsive
+    col_table, col_chart = st.columns([2, 1])  # 2:1 ratio on desktop, stacks on mobile
+    
+    with col_table:
+        st.dataframe(
+            df.style.format(precision=2),
+            height=min(len(result) * 45 + 50, 400),  # Dynamic height
+            width=None  # Auto width
+        )
+    
+    with col_chart:
+        chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
+        
+        chart_data = {
+            k.split(" (")[0]: v for k, v in result.items() 
+            if "kg/m³" in k and "Admixture" not in k
+        }
 
-    chart_data = {
-        k.split(" (")[0]: v for k, v in result.items() if "kg/m³" in k and "Admixture" not in k
-    }
-
-    # Smaller pie chart with adjusted size
-    fig, ax = plt.subplots(figsize=(4,3))  # Reduced figure size
-    if chart_type == "Pie Chart":
-        ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')
+        # Dynamic figure size based on screen width
+        fig_width = 4 if st.session_state.get('is_mobile', False) else 5
+        fig, ax = plt.subplots(figsize=(fig_width, fig_width*0.75))
+        
+        if chart_type == "Pie":
+            ax.pie(
+                chart_data.values(), 
+                labels=chart_data.keys(), 
+                autopct='%1.1f%%', 
+                startangle=90,
+                textprops={'fontsize': 8}
+            )
+            ax.axis('equal')
+        else:
+            bars = ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
+            ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
+            ax.set_ylabel("Mass (kg/m³)")
+            ax.set_title("Mix Composition")
+            plt.xticks(rotation=45, ha='right')
+        
         plt.tight_layout()
-    else:
-        ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
-        ax.set_ylabel("Mass (kg/m³)")
-        ax.set_title("Mix Composition")
-        plt.xticks(rotation=45)
-        plt.tight_layout()
+        st.pyplot(fig)
 
-    st.pyplot(fig)
-
-    # --- Download CSV ---
+    # Download button below both elements
     csv = df.to_csv().encode('utf-8')
     st.download_button(
         label="📥 Download CSV",
         data=csv,
         file_name="aci_mix.csv",
-        mime='text/csv'
+        mime='text/csv',
+        use_container_width=True
     )
 
 # --- Footer ---
 st.markdown("---")
 st.caption("© 2025 ACI 211.1 Concrete Mix Designer | Built by Automation_hub")
+
+# Mobile detection (simplified)
+st.session_state.is_mobile = st.checkbox("Mobile view", False, disabled=True, label_visibility="collapsed")
