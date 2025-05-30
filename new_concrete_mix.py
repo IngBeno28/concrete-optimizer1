@@ -41,11 +41,14 @@ ACI_WATER_CONTENT = {
     "Air-Entrained": {10: 180, 20: 160, 40: 140}
 }
 
-# Adjusted CA volumes based on Fineness Modulus (FM)
+# Expanded CA volumes with Fineness Modulus precision
 ACI_CA_VOLUME = {
     2.4: {10: 0.44, 20: 0.60, 40: 0.68},
+    2.5: {10: 0.46, 20: 0.62, 40: 0.70},
     2.6: {10: 0.47, 20: 0.64, 40: 0.72},
+    2.7: {10: 0.49, 20: 0.66, 40: 0.74},
     2.8: {10: 0.50, 20: 0.68, 40: 0.76},
+    2.9: {10: 0.52, 20: 0.70, 40: 0.78},
     3.0: {10: 0.53, 20: 0.72, 40: 0.80}
 }
 
@@ -78,11 +81,12 @@ with st.expander("📋 ACI Design Parameters", expanded=True):
         slump = st.slider("📐 Slump (mm)", 25, 200, 75)
         air_entrained = st.checkbox("💨 Air-Entrained Concrete", False)
         target_air = st.slider("🎯 Target Air Content (%)", 1.0, 8.0, 5.0) if air_entrained else 0.0
-        fa_fineness = st.slider("📊 Fine Aggregate Fineness Modulus", 2.4, 3.0, 2.7, 0.1)
+        fa_fineness = st.slider("📊 Fine Aggregate Fineness Modulus", 
+                               2.4, 3.0, 2.7, 0.1, format="%.1f")
         
     with col3:
         w_c_ratio = st.number_input("💧 Water/Cement Ratio", 0.3, 0.7, 0.5, 0.01,
-                                  help=f"Max {ACI_EXPOSURE[exposure]['max_wcm']} for {exposure} exposure")
+                                   help=f"Max {ACI_EXPOSURE[exposure]['max_wcm']} for {exposure} exposure")
         admixture_pct = st.number_input("⚗️ Admixture (%)", 0.0, 10.0, 0.0, 0.1,
                                       help="Water reducer dosage (0.5-2% typical)")
         fa_moisture = st.number_input("💦 FA Moisture (%)", 0.0, 10.0, 2.0)
@@ -112,7 +116,13 @@ def calculate_aci_mix(params):
     cement = max(water / params["w_c_ratio"], ACI_EXPOSURE[params["exposure"]]["min_cement"])
     
     # 3. Coarse Aggregate (ACI Table 6.3.6 with FM adjustment)
-    ca_volume = ACI_CA_VOLUME[params["fa_fineness"]][params["max_agg_size"]]
+    fm_rounded = round(params["fa_fineness"], 1)  # Ensure proper key lookup
+    try:
+        ca_volume = ACI_CA_VOLUME[fm_rounded][params["max_agg_size"]]
+    except KeyError:
+        st.error(f"❌ Invalid Fineness Modulus: {fm_rounded}. Use values between 2.4-3.0")
+        return None
+        
     ca_mass = ca_volume * 1600  # Assuming rodded density of 1600 kg/m³
     
     # 4. Fine Aggregate (Absolute Volume Method)
@@ -156,8 +166,9 @@ if st.button("🔍 Calculate ACI Mix", type="primary"):
     
     try:
         result = calculate_aci_mix(input_params)
-        st.session_state.result = result
-        st.success("✅ ACI Calculation Complete!")
+        if result:  # Only update if calculation succeeded
+            st.session_state.result = result
+            st.success("✅ ACI Calculation Complete!")
     except Exception as e:
         st.error(f"❌ Error: {str(e)}")
 
@@ -190,4 +201,4 @@ if 'result' in st.session_state:
 
 # --- Footer ---
 st.markdown("---")
-st.caption("© 2025 ACI 211.1 Mix Designer | Compliant with ACI 318-19")
+st.caption("© 2025 ACI 211.1 Concrete Mix Designer | Built by Automation_hub")
