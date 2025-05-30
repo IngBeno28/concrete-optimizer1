@@ -103,9 +103,9 @@ if st.button("🧪 Compute Mix Design"):
     result = calculate_mix()
     st.write("### 📊 Mix Proportions:")
     
-    # Improved table display
+    # Table display
     df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-    st.dataframe(df.style.format(precision=2), height=300, width=600)
+    st.dataframe(df.style.format(precision=2), height=500, width=700)
     
     # --- Chart Toggle ---
     chart_type = st.radio("📈 Select Chart Type", ["Pie Chart", "Bar Chart"], horizontal=True)
@@ -114,7 +114,7 @@ if st.button("🧪 Compute Mix Design"):
         k.split(" (")[0]: v for k, v in result.items() if "kg/m³" in k and "Admixture" not in k
     }
 
-    # Adjust chart size
+    # Chart size
     fig, ax = plt.subplots(figsize=(6,4))
     if chart_type == "Pie Chart":
         ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90)
