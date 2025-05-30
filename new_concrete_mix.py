@@ -1,54 +1,24 @@
 # Streamlit App: ACI-Compliant Concrete Mix Design Optimizer
+# --- Import Dependencies ---
 import streamlit as st
 import pandas as pd
-from io import BytesIO
 import matplotlib.pyplot as plt
 from fpdf import FPDF
+from io import BytesIO
 import os
 
-# --- Modern Streamlit Config ---
-st.set_page_config(
-    page_title="ACI Concrete Mix Designer",
-    page_icon="🧱",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- Streamlit Config ---
+st.set_page_config("ACI Mix Designer Enhanced", layout="wide")
 
-# --- Theme Config ---
-if not os.path.exists('.streamlit'):
-    os.makedirs('.streamlit')
-
-if not os.path.exists('.streamlit/config.toml'):
-    with open('.streamlit/config.toml', 'w') as f:
-        f.write("""
-[theme]
-primaryColor = "#1a5276"
-backgroundColor = "#f5f5f5"
-secondaryBackgroundColor = "#e8f4f8"
-textColor = "#212121"
-font = "sans serif"
-""")
-
-# --- Cache Management ---
-if st.sidebar.button("🔄 Clear ALL Cache"):
-    st.cache_data.clear()
-    st.success("Cache cleared! Refreshing...")
-    st.rerun()
-
-# --- ACI Constants ---
+# --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
     "Non-Air-Entrained": {10: 205, 20: 185, 40: 160},
     "Air-Entrained": {10: 180, 20: 160, 40: 140}
 }
 
-# Expanded CA volumes with Fineness Modulus precision
 ACI_CA_VOLUME = {
     2.4: {10: 0.44, 20: 0.60, 40: 0.68},
-    2.5: {10: 0.46, 20: 0.62, 40: 0.70},
-    2.6: {10: 0.47, 20: 0.64, 40: 0.72},
     2.7: {10: 0.49, 20: 0.66, 40: 0.74},
-    2.8: {10: 0.50, 20: 0.68, 40: 0.76},
-    2.9: {10: 0.52, 20: 0.70, 40: 0.78},
     3.0: {10: 0.53, 20: 0.72, 40: 0.80}
 }
 
@@ -58,146 +28,106 @@ ACI_EXPOSURE = {
     "Severe": {"max_wcm": 0.45, "min_cement": 335}
 }
 
-# --- App UI ---
-st.title("🧱 ACI 211.1 Concrete Mix Designer")
-st.markdown("""
-<div style='text-align: center;'>
-    <h3 style='color: #007FFF;'>
-        ACI-COMPLIANT MIX DESIGN WITH DURABILITY CONTROLS
-    </h3>
-</div>
-""", unsafe_allow_html=True)
+# --- Input UI ---
+st.title("🧱 Enhanced ACI 211.1 Concrete Mix Designer")
 
-# --- Enhanced Input Section ---
-with st.expander("📋 ACI Design Parameters", expanded=True):
+with st.expander("📋 ACI Design Inputs", expanded=True):
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        fck = st.number_input("🧪 Target strength (MPa)", 10.0, 80.0, 25.0)
-        exposure = st.selectbox("🏗️ Exposure Class", list(ACI_EXPOSURE.keys()))
-        max_agg_size = st.selectbox("📏 Max Aggregate Size (mm)", [10, 20, 40])
-        
+        fck = st.number_input("f'c (MPa)", 10.0, 80.0, 25.0)
+        std_dev = st.number_input("Standard Deviation (MPa)", 2.0, 10.0, 5.0)
+        exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE))
+
     with col2:
-        slump = st.slider("📐 Slump (mm)", 25, 200, 75)
-        air_entrained = st.checkbox("💨 Air-Entrained Concrete", False)
-        target_air = st.slider("🎯 Target Air Content (%)", 1.0, 8.0, 5.0) if air_entrained else 0.0
-        fa_fineness = st.slider("📊 Fine Aggregate Fineness Modulus", 
-                               2.4, 3.0, 2.7, 0.1, format="%.1f")
-        
+        max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40])
+        slump = st.slider("Slump (mm)", 25, 200, 75)
+        air_entrained = st.checkbox("Air Entrained", False)
+        air_content = st.slider("Target Air Content (%)", 1.0, 8.0, 5.0) if air_entrained else 0.0
+
     with col3:
-        w_c_ratio = st.number_input("💧 Water/Cement Ratio", 0.3, 0.7, 0.5, 0.01,
-                                   help=f"Max {ACI_EXPOSURE[exposure]['max_wcm']} for {exposure} exposure")
-        admixture_pct = st.number_input("⚗️ Admixture (%)", 0.0, 10.0, 0.0, 0.1,
-                                      help="Water reducer dosage (0.5-2% typical)")
-        fa_moisture = st.number_input("💦 FA Moisture (%)", 0.0, 10.0, 2.0)
-        ca_moisture = st.number_input("💧 CA Moisture (%)", 0.0, 10.0, 1.0)
+        wcm = st.number_input("w/c Ratio", 0.3, 0.7, 0.5)
+        admixture = st.number_input("Admixture (%)", 0.0, 5.0, 0.0)
+        fm = st.slider("FA Fineness Modulus", 2.4, 3.0, 2.7, step=0.1)
 
-# --- Cached Calculation Function ---
-@st.cache_data(ttl=3600)
-def calculate_aci_mix(params):
-    # Validate w/cm ratio against exposure
-    if params["w_c_ratio"] > ACI_EXPOSURE[params["exposure"]]["max_wcm"]:
-        st.warning(f"⚠️ w/cm exceeds {ACI_EXPOSURE[params['exposure']]['max_wcm']} for {params['exposure']} exposure")
-    
-    # 1. Water Content (ACI Table 6.3.3)
-    water_key = "Air-Entrained" if params["air_entrained"] else "Non-Air-Entrained"
-    water = ACI_WATER_CONTENT[water_key][params["max_agg_size"]]
-    
-    # Adjust for slump (simplified linear adjustment)
-    water += (params["slump"] - 75) * 0.3
-    
-    # Apply water reduction from admixture (if any)
-    if params["admixture_pct"] > 0:
-        water_reduction = min(0.15, params["admixture_pct"] * 0.05)  # Max 15% reduction
-        water *= (1 - water_reduction)
-        st.info(f"🔹 Water reduced by {water_reduction*100:.1f}% due to admixture")
-    
-    # 2. Cement Content (with min. cement check)
-    cement = max(water / params["w_c_ratio"], ACI_EXPOSURE[params["exposure"]]["min_cement"])
-    
-    # 3. Coarse Aggregate (ACI Table 6.3.6 with FM adjustment)
-    fm_rounded = round(params["fa_fineness"], 1)  # Ensure proper key lookup
+with st.expander("🔬 Material Properties"):
+    sg_cement = st.number_input("Cement SG", 2.0, 3.5, 3.15)
+    sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, 2.65)
+    sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, 2.65)
+    unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, 1600)
+    moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, 2.0)
+    moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 1.0)
+
+# --- Calculation Logic ---
+@st.cache_data
+def calculate_mix():
+    ft = fck + 1.34 * std_dev
+    if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
+        st.warning("w/c exceeds max for exposure class")
+
+    water = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"][max_agg_size]
+    water += (slump - 75) * 0.3
+    if admixture:
+        water *= 1 - min(0.15, admixture * 0.05)
+
+    cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
+
     try:
-        ca_volume = ACI_CA_VOLUME[fm_rounded][params["max_agg_size"]]
-    except KeyError:
-        st.error(f"❌ Invalid Fineness Modulus: {fm_rounded}. Use values between 2.4-3.0")
-        return None
-        
-    ca_mass = ca_volume * 1600  # Assuming rodded density of 1600 kg/m³
-    
-    # 4. Fine Aggregate (Absolute Volume Method)
-    cement_vol = cement / (3.15 * 1000)
+        ca_vol = ACI_CA_VOLUME[round(fm,1)][max_agg_size]
+    except:
+        ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
+
+    ca_mass = ca_vol * unit_weight_ca
+
+    cement_vol = cement / (sg_cement * 1000)
     water_vol = water / 1000
-    air_vol = params["target_air"] / 100 if params["air_entrained"] else 0.01
-    ca_vol = ca_mass / (2.65 * 1000)  # Assuming SG=2.65
-    
-    fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol)
-    fa_mass = fa_vol * 2.65 * 1000
-    
-    # 5. Moisture Corrections
-    fa_mass *= (1 + params["fa_moisture"] / 100)
-    ca_mass *= (1 + params["ca_moisture"] / 100)
-    water -= (fa_mass * (params["fa_moisture"] / 100) + 
-              ca_mass * (params["ca_moisture"] / 100))
-    
+    air_vol = air_content / 100 if air_entrained else 0.01
+    ca_vol_abs = ca_mass / (sg_ca * 1000)
+    fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol_abs)
+    fa_mass = fa_vol * sg_fa * 1000
+
+    # Moisture correction
+    fa_mass_adj = fa_mass * (1 + moist_fa / 100)
+    ca_mass_adj = ca_mass * (1 + moist_ca / 100)
+    water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
+
     return {
-        'Water (kg/m³)': round(water, 1),
-        'Cement (kg/m³)': round(cement, 1),
-        'Fine Aggregate (kg/m³)': round(fa_mass, 1),
-        'Coarse Aggregate (kg/m³)': round(ca_mass, 1),
-        'Air Content (%)': round(params["target_air"], 1),
-        'Admixture (kg/m³)': round(cement * params["admixture_pct"] / 100, 2)
+        "Target Mean Strength f't (MPa)": round(ft,2),
+        "Water (kg/m³)": round(water,1),
+        "Cement (kg/m³)": round(cement,1),
+        "Fine Aggregate (kg/m³)": round(fa_mass_adj,1),
+        "Coarse Aggregate (kg/m³)": round(ca_mass_adj,1),
+        "Air Content (%)": round(air_content,1),
+        "Admixture (kg/m³)": round(cement * admixture / 100,2)
     }
 
-# --- Main Logic ---
-if st.button("🔍 Calculate ACI Mix", type="primary"):
-    input_params = {
-        "exposure": exposure,
-        "max_agg_size": max_agg_size,
-        "slump": slump,
-        "air_entrained": air_entrained,
-        "target_air": target_air,
-        "fa_fineness": fa_fineness,
-        "w_c_ratio": w_c_ratio,
-        "admixture_pct": admixture_pct,
-        "fa_moisture": fa_moisture,
-        "ca_moisture": ca_moisture
-    }
-    
-    try:
-        result = calculate_aci_mix(input_params)
-        if result:  # Only update if calculation succeeded
-            st.session_state.result = result
-            st.success("✅ ACI Calculation Complete!")
-    except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+if st.button("🧪 Compute Mix Design"):
+    result = calculate_mix()
+    st.write("### 📊 Mix Proportions:")
+    df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+    st.dataframe(df)
 
-# --- Results Display ---
-if 'result' in st.session_state:
-    st.header("📊 ACI Mix Proportions")
-    df = pd.DataFrame.from_dict(st.session_state.result, orient='index', columns=['Value'])
-    st.dataframe(df.style.format("{:.1f}"), use_container_width=True)
-    
-    # --- Pie Chart (excludes air and admixture) ---
-    st.subheader("Mass Distribution (kg/m³)")
+    # --- Chart Toggle ---
+    chart_type = st.radio("📈 Select Chart Type", ["Pie Chart", "Bar Chart"], horizontal=True)
+
+    chart_data = {
+        k.split(" (")[0]: v for k, v in result.items() if "kg/m³" in k and "Admixture" not in k
+    }
+
     fig, ax = plt.subplots()
-    components = {k: v for k, v in st.session_state.result.items() 
-                 if "kg/m³" in k and "Admixture" not in k}
-    ax.pie(
-        components.values(),
-        labels=[k.split(" (")[0] for k in components.keys()],
-        autopct='%1.1f%%',
-        colors=['#66b3ff','#99ff99','#ffcc99','#c2c2f0']
-    )
+    if chart_type == "Pie Chart":
+        ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
+    else:
+        ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
+        ax.set_ylabel("Mass (kg/m³)")
+        ax.set_title("Mix Composition")
+
     st.pyplot(fig)
-    
-    # --- Export ---
-    st.download_button(
-        "⬇️ Download CSV",
-        df.to_csv(),
-        "aci_mix_design.csv",
-        "text/csv"
-    )
+
+    # --- Download CSV ---
+    st.download_button("📥 Download CSV", df.to_csv(), file_name="aci_mix.csv")
+
 
 # --- Footer ---
 st.markdown("---")
