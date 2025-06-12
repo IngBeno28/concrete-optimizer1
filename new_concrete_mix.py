@@ -106,7 +106,7 @@ if st.button("🧪 Compute Mix Design"):
     df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
     
     # Use columns to make layout responsive
-    col_table, col_chart = st.columns([4, 2])  # 2:1 ratio on desktop, stacks on mobile
+    col_table, col_chart = st.columns([2, 2])  # 2:1 ratio on desktop, stacks on mobile
     
     with col_table:
         st.dataframe(
