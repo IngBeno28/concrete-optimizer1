@@ -8,6 +8,10 @@ from io import BytesIO
 # --- Streamlit Config ---
 st.set_page_config("ACI Mix Designer Enhanced", layout="wide")
 
+with open("style.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
     "Non-Air-Entrained": {10: 205, 20: 185, 40: 160},
