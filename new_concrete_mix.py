@@ -111,7 +111,7 @@ if st.button("🧪 Compute Mix Design"):
     with col_table:
         st.dataframe(
             df.style.format(precision=2),
-            height=min(len(result) * 50 + 50, 400),  # Dynamic height
+            height=min(len(result) * 45 + 50, 500),  # Dynamic height
             width=None  # Auto width
         )
     
