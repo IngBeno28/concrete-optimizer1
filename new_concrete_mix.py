@@ -34,7 +34,7 @@ with st.expander("📋 ACI Design Inputs", expanded=True):
 
     with col1:
         fck = st.number_input("f'c (MPa)", 10.0, 80.0, 25.0)
-        std_dev = st.number_input("Standard deviation (MPa)", 3.5, 4.5, 5.5)
+        std_dev = st.number_input("Standard deviation (MPa)", 2, 5.0, 5.0)
         exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE))
 
     with col2:
