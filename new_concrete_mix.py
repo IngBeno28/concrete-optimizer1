@@ -112,7 +112,7 @@ if st.button("🧪 Compute Mix Design"):
         st.dataframe(
             df.style.format(precision=2),
             height=min(len(result) * 45 + 50, 400),  # Dynamic height
-            width=None  # Auto width
+            use_container_width=True 
         )
     
     with col_chart:
