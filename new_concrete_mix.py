@@ -34,7 +34,7 @@ with st.expander("📋 ACI Design Inputs", expanded=True):
 
     with col1:
         fck = st.number_input("f'c (MPa)", 10.0, 80.0, 25.0)
-        std_dev = st.number_input("Standard Deviation (MPa)", 2.0, 10.0, 5.0)
+        ovd_marg = st.number_input("Overdesign Margin (MPa)", 7.0, 8.5, 10.0)
         exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE))
 
     with col2:
